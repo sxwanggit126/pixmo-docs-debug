@@ -155,7 +155,6 @@ class GenerateDocumentPoint(SuperStep):
         combined_processed = combined.map(
             process_point,
             lazy=False,
-            save_num_proc=NUM_RENDER_WORKERS,
             name="Process Point Data",
         )
 

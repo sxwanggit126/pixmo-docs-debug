@@ -1,8 +1,60 @@
 import os
 from argparse import ArgumentParser
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Apply DataDreamer patches before importing anything else
+from pipeline.utils.datadreamer_patches import *
 
 from pipeline import run_datadreamer_session
 from pipeline.utils.gpt4o_support import datadreamer_gpt4o_support
+
+
+def validate_config():
+    """Validate environment configuration based on API mode."""
+    api_mode = os.getenv("API_MODE", "official")
+
+    print(f"\n=== Configuration Validation ===")
+    print(f"API Mode: {api_mode}")
+
+    if api_mode == "official":
+        # Check official API requirements
+        required_vars = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+
+        if missing_vars:
+            print(f"\nERROR: Missing required environment variables for official mode:")
+            print(f"  {', '.join(missing_vars)}")
+            print(f"\nPlease set these variables in your .env file or environment.")
+            return False
+    else:
+        # Check proxy API requirements
+        required_vars = ["PROXY_API_KEY", "PROXY_BASE_URL"]
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+
+        if missing_vars:
+            print(f"\nERROR: Missing required environment variables for proxy mode:")
+            print(f"  {', '.join(missing_vars)}")
+            print(f"\nPlease set these variables in your .env file or environment.")
+            return False
+
+    # Display model configuration
+    print(f"\nModel Configuration:")
+    print(f"  OpenAI Model: {os.getenv('OPENAI_MODEL', 'gpt-4o')}")
+    print(f"  OpenAI Mini Model: {os.getenv('OPENAI_MINI_MODEL', 'gpt-4o-mini')}")
+    print(f"  Anthropic Model: {os.getenv('ANTHROPIC_MODEL', 'claude-3-7-sonnet-20250219')}")
+
+    if api_mode == "official":
+        print(f"\nAPI Endpoints:")
+        print(f"  OpenAI: {os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1 (default)')}")
+        print(f"  Anthropic: {os.getenv('ANTHROPIC_BASE_URL', 'https://api.anthropic.com (default)')}")
+    else:
+        print(f"\nProxy Endpoint: {os.getenv('PROXY_BASE_URL')}")
+
+    print(f"\n=== Configuration Valid ===\n")
+    return True
 
 
 def main(args):
@@ -105,6 +157,10 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    # Validate configuration before proceeding
+    if not validate_config():
+        exit(1)
 
     print("LLM:", args.llm)
     print("Code LLM:", args.code_llm)

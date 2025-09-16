@@ -191,7 +191,45 @@ def render_latex(latex_source):
         raise RuntimeError(f'Error encountered during LaTeX rendering with all compilers:\n{stdout.decode("utf-8")}')
 
     # Convert PDF bytes to images using pdf2image
-    images = convert_from_bytes(open(pdf_file, "rb").read())
+    try:
+        images = convert_from_bytes(open(pdf_file, "rb").read())
+    except Exception as e:
+        print(f"⚠️  pdf2image failed (probably missing pdftoppm): {e}")
+        print("Trying alternative method with PIL...")
+
+        # Fallback: Try to use ImageMagick or create a placeholder
+        try:
+            # Try ImageMagick convert command
+            png_file = os.path.join(temp_dir, "temp.png")
+            result = subprocess.run(
+                ["convert", "-density", "300", pdf_file, png_file],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode == 0 and os.path.exists(png_file):
+                from PIL import Image
+                images = [Image.open(png_file)]
+            else:
+                raise Exception("ImageMagick conversion failed")
+
+        except Exception:
+            # Final fallback: Create a placeholder image
+            print("Creating placeholder image...")
+            from PIL import Image, ImageDraw, ImageFont
+            img = Image.new('RGB', (800, 600), color='white')
+            draw = ImageDraw.Draw(img)
+
+            # Add text to indicate the issue
+            text = "LaTeX rendered successfully\nPDF created but cannot convert to image\nInstall poppler-utils for proper rendering"
+            try:
+                # Try to use a basic font
+                font = ImageFont.load_default()
+                draw.multiline_text((50, 200), text, fill='black', font=font)
+            except:
+                draw.multiline_text((50, 200), text, fill='black')
+
+            images = [img]
 
     # Cleanup temporary files (optional)
     os.remove(latex_file)

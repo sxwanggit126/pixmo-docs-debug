@@ -2,8 +2,43 @@
 
 This is the repository for the generation system of the [PixMo-Docs](https://huggingface.co/datasets/allenai/pixmo-docs), [CoSyn-400K](https://huggingface.co/datasets/allenai/CoSyn-400K), and [CoSyn-point](https://huggingface.co/datasets/allenai/CoSyn-point) datasets. PixMo-Docs was used to train the [Molmo](https://arxiv.org/abs/2409.17146) model, and the CoSyn datasets are an expanded version that use an improved pipeline and more types of documents. More details can be found in our [paper](https://arxiv.org/pdf/2502.14846).
 
+## 🆕 New Features
+
+This enhanced version includes the following improvements over the original repository:
+
+- **Modern Package Management**: Uses [uv](https://github.com/astral-sh/uv) for fast, reliable Python dependency management with `pyproject.toml`
+- **Flexible API Configuration**: Supports both official APIs and proxy services (like OpenRouter) via `.env` configuration
+- **Batch Testing Script**: Includes `test_pipelines.py` for automated testing of multiple pipelines
+- **Environment Variables**: All API keys and configurations managed through `.env` file for better security
+- **Improved Error Handling**: Enhanced multiprocessing patches and better error recovery
+- **Dual Language Documentation**: Both English and Chinese README files
+
 ## Installation
-After cloning the repo, you can install the required dependencies using the following commands:
+
+### Prerequisites
+
+- Python 3.10 or higher
+- [uv](https://github.com/astral-sh/uv) package manager
+
+### Using uv (Recommended)
+
+After cloning the repo, you can set up the project using uv:
+
+```bash
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -r requirements.txt
+
+# Install additional dependencies for specific pipelines
+uv pip install playwright && playwright install
+uv pip install mpl_finance<=0.10.1 mplfinance<=0.12.10b0 cairosvg<=2.7.1
+```
+
+### Traditional Installation (Alternative)
 
 ```bash
 conda create --name pixmo-doc python=3.10
@@ -11,107 +46,166 @@ conda activate pixmo-doc
 pip install -r requirements.txt
 ```
 
-Then export your API key as an environment variable:
+### Environment Configuration
+
+Create a `.env` file in the project root with your API keys:
 
 ```bash
-export OPENAI_API_KEY=your-api-key
-export ANTHROPIC_API_KEY=your-api-key
-export HF_TOKEN=your-api-key # only if you want to upload the dataset to the Hugging Face Hub
+# API Mode: "official" or "proxy"
+API_MODE=official
+
+# Official API Keys
+OPENAI_API_KEY=your-openai-key
+ANTHROPIC_API_KEY=your-anthropic-key
+HF_TOKEN=your-huggingface-token  # Optional, for uploading datasets
+
+# Proxy Configuration (if API_MODE=proxy)
+PROXY_API_KEY=your-proxy-key
+PROXY_BASE_URL=https://api.openrouter.ai/v1
+OPENAI_MODEL=gpt-4o
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 ```
 
-You need to install the following packages to use some of the pipelines:
-1. LaTeX: the installation depends on your operating system, you can refer to the [official LaTeX website](https://www.latex-project.org/get/) for more details.
+### System Dependencies
 
-2. Mermaid: you can refer to [here](https://github.com/mermaid-js/mermaid-cli) to install the Mermaid CLI using npm:
-    ```bash
-    npm install -g @mermaid-js/mermaid-cli
-    ```
+Some pipelines require additional system dependencies:
 
-3. HTML: install playwright with:
-
-    ```bash
-    pip install playwright
-    playwright install
-    ```
-
-4. mplfinance:
-
-   ```
-   pip install mpl_finance<=0.10.1 mplfinance<=0.12.10b0
+1. **LaTeX**: Install based on your OS from [official LaTeX website](https://www.latex-project.org/get/)
+   ```bash
+   # macOS
+   brew install --cask mactex
+   # Ubuntu/Debian
+   sudo apt-get install texlive-full
    ```
 
-5. cairosvg:
-
+2. **Mermaid CLI**:
+   ```bash
+   npm install -g @mermaid-js/mermaid-cli
    ```
-   pip install cairosvg<=2.7.1
+
+3. **PDF Tools** (for LaTeX pipelines):
+   ```bash
+   # macOS
+   brew install poppler
+   # Ubuntu/Debian
+   sudo apt-get install poppler-utils
    ```
 
 ## Quick Start
-The [main.py](main.py) script is the entry point for the generation of the dataset. You can use the following main arguments to control the generation process:
 
-```python
+### Basic Usage
+
+Generate synthetic data using the main script:
+
+```bash
 python main.py -p {PIPELINE} \
-               -t {TYPE_OF_DATA_YOU_WANT_TO_GENERATE} \
+               -t {TYPE_OF_DATA} \
                -n {NUMBER_OF_SAMPLES} \
-               -m {NAME_OF_DATASET} \
+               -m {DATASET_NAME}
 ```
 
-For example, `python main.py -p "MatplotlibChartPipeline" -n 5 -m "matplotlib_test" -t "bar chart"`, will generate 5 bar charts using the MatplotlibChartPipeline and save them with the name "matplotlib_test".
+Example:
+```bash
+python main.py -p "MatplotlibChartPipeline" -n 5 -m "matplotlib_test" -t "bar chart"
+```
 
-You can use comma separated values for the `-p` and `-t` arguments to generate multiple types of data using different pipelines at the same time.
+### Batch Testing
 
-Please refer to the [main.py](main.py) script for more details on the available arguments and their usage.
+Test multiple pipelines at once:
 
+```bash
+python test_pipelines.py
+```
 
-## Pipelines  
-We released 25 pipelines to generate eight main categories of text-rich images: charts, tables, documents, diagrams, circuits, specialized graphics, and pointing. Each pipeline uses one renderer/programming language to generate the images.  
+This will test all configured pipelines and save results to the `examples/` directory.
 
-* **Chart**:  
-    * *MatplotlibChartPipeline*: using [Matplotlib](https://matplotlib.org/) to generate charts like bar charts, line charts, etc. You can check the [Matplotlib gallery](https://matplotlib.org/stable/gallery/index.html) for possible charts.  
-    * *PlotlyChartPipeline*: using [Plotly](https://plotly.com/python/) to generate charts. You can check the [Plotly gallery](https://plotly.com/python/) for possible charts.  
-    * *VegaLiteChartPipeline*: using [Vega-Lite](https://vega.github.io/vega-lite/) to generate charts. You can check the [Vega-Lite gallery](https://vega.github.io/vega-lite/examples/) for possible usage.  
-    * *LaTeXChartPipeline*: using TikZ to generate charts. This pipeline only works for simple charts like bar charts, line charts, etc.  
-    * *HTMLChartPipeline*: using HTML and CSS to generate charts. This pipeline only works for simple charts like bar charts, line charts, etc.  
+### Advanced Usage
 
-* **Table**:  
-    * *LaTeXTablePipeline*: best for tables with complex structures.  
-    * *MatplotlibTablePipeline*: uses Matplotlib to render tables within figures.  
-    * *PlotlyTablePipeline*: only works for simple tables like single-header tables.  
-    * *HTMLTablePipeline*: only works for simple tables like single-header tables.  
+Generate multiple types with different pipelines:
+```bash
+python main.py -p "MatplotlibChartPipeline,PlotlyChartPipeline" \
+               -n 10 \
+               -t "bar chart,line chart,scatter plot" \
+               -m "combined_charts"
+```
 
-* **Document**:  
-    * *LaTeXDocumentPipeline*: works for diverse types of documents like reports, articles, etc.  
-    * *HTMLDocumentPipeline*: can create documents with complex styles and structures.  
-    * *DOCXDocumentPipeline*: generates Microsoft Word-compatible `.docx` documents.  
+### Command Line Arguments
 
-* **Diagram**:  
-    * *GraphvizDiagramPipeline*: using [Graphviz](https://graphviz.org/) to generate diagrams like directed graphs, trees, etc.  
-    * *MermaidDiagramPipeline*: using [Mermaid](https://mermaid-js.github.io/mermaid/#/) to generate diagrams like flowcharts, sequence diagrams, etc.  
-    * *LaTeXDiagramPipeline*: using TikZ to generate diagrams. You can refer to [this](https://texample.net/tikz/examples/tag/diagrams/) for possible diagrams.  
+- `-p, --pipelines`: Pipeline names (comma-separated)
+- `-t, --types`: Visualization types to generate (comma-separated)
+- `-n, --num`: Number of samples per pipeline
+- `-l, --llm`: LLM model for text generation (default: gpt-4o)
+- `-c, --code_llm`: LLM for code generation (default: claude-3-5-sonnet)
+- `-s, --seed`: Random seed (default: 42)
+- `-b, --batch_size`: LLM batch size (default: 24)
+- `-m, --name`: Dataset name for HuggingFace upload
+- `-f, --force`: Force regeneration, ignore cache
 
-* **Circuit**:  
-    * *SchemDrawCircuitPipeline*: uses [SchemDraw](https://schemdraw.readthedocs.io/) to generate electrical circuit diagrams.  
-    * *LaTeXCircuitPipeline*: uses TikZ circuit libraries to generate circuit diagrams.  
+## Pipelines
 
-* **Specialized Graphics**:  
-    * *DALLEImagePipeline*: generates images using DALL·E models.  
-    * *RdkitChemicalPipeline*: renders chemical structure diagrams using [RDKit](https://www.rdkit.org/).  
-    * *LaTeXMathPipeline*: generates mathematical expressions using LaTeX.  
-    * *LilyPondMusicPipeline*: generates sheet music using [LilyPond](http://lilypond.org/).  
-    * *SVGGraphicPipeline*: creates vector graphics using SVG format.  
-    * *AsymptoteGraphicPipeline*: uses [Asymptote](https://asymptote.sourceforge.io/) to generate mathematical and technical graphics.  
+We support 25 pipelines across 8 categories:
 
-* **Web Screens**:
-    * *HTMLScreenPipeline*: creates HTML-based screen layouts rendered with [Playwright](https://playwright.dev/) and Google Chrome / Chromium.  
+### Charts
+- **MatplotlibChartPipeline**: Traditional charts using Matplotlib
+- **PlotlyChartPipeline**: Interactive charts with Plotly
+- **VegaLiteChartPipeline**: Declarative charts with Vega-Lite
+- **LaTeXChartPipeline**: Charts using TikZ
+- **HTMLChartPipeline**: Simple charts with HTML/CSS
 
-* **Pointing**:  
-    * *HTMLDocumentPointPipeline*: generates HTML documents with structured points.  
+### Tables
+- **LaTeXTablePipeline**: Complex structured tables
+- **MatplotlibTablePipeline**: Tables within figures
+- **PlotlyTablePipeline**: Simple interactive tables
+- **HTMLTablePipeline**: Web-based tables
 
+### Documents
+- **LaTeXDocumentPipeline**: Scientific documents and reports
+- **HTMLDocumentPipeline**: Web documents with rich styling
+- **DOCXDocumentPipeline**: Microsoft Word documents
 
+### Diagrams
+- **GraphvizDiagramPipeline**: Graph and tree structures
+- **MermaidDiagramPipeline**: Flowcharts and sequence diagrams
+- **LaTeXDiagramPipeline**: Technical diagrams with TikZ
 
+### Circuits
+- **SchemDrawCircuitPipeline**: Electrical circuit diagrams
+- **LaTeXCircuitPipeline**: Circuits using CircuiTikZ
+
+### Specialized Graphics
+- **DALLEImagePipeline**: AI-generated images
+- **RdkitChemicalPipeline**: Chemical structure diagrams
+- **LaTeXMathPipeline**: Mathematical expressions
+- **LilyPondMusicPipeline**: Sheet music notation
+- **SVGGraphicPipeline**: Vector graphics
+- **AsymptoteGraphicPipeline**: Mathematical/technical graphics
+
+### Web Screens
+- **HTMLScreenPipeline**: Web page screenshots
+
+### Pointing
+- **HTMLDocumentPointPipeline**: Documents with pointing annotations
+
+## Troubleshooting
+
+### Common Issues
+
+1. **DataDreamer multiprocessing errors**: Already patched in this version
+2. **LaTeX missing packages**: Install `texlive-full` or equivalent
+3. **Plotly export issues**: Ensure `kaleido` is installed: `uv pip install kaleido`
+4. **API rate limits**: Adjust `batch_size` parameter or use proxy services
+
+### Debug Mode
+
+Enable detailed logging:
+```bash
+export DATADREAMER_DISABLE_CACHE=1
+python main.py -p "PlotlyChartPipeline" -n 1 -t "bar chart" -f
+```
 
 ## Citation
-Please cite the following papers if you use this codebase or our datasets in your work.
+
+Please cite the following papers if you use this codebase or our datasets:
 
 ```bibtex
 @article{yang2025scaling,

@@ -20,23 +20,46 @@ NUM_RENDER_WORKERS = 4
 
 
 def check_pdflatex():
-    from pylatex import Document, Command, NoEscape
+    # Create a simple LaTeX document without PyLaTeX to avoid package dependencies
+    latex_content = r"""\documentclass{article}
+\begin{document}
+\title{Test Document}
+\maketitle
+This is a test document to check if pdflatex is available.
+\end{document}"""
 
-    # Create temporary directory
     temp_dir = tempfile.mkdtemp()
+    tex_file = os.path.join(temp_dir, "test_document.tex")
 
     try:
-        doc = Document("basic")
-        doc.preamble.append(Command("title", "Awesome Title"))
-        doc.append(NoEscape(r"\maketitle"))
-        doc.append(r"This is a test document to check if pdflatex is available.")
-        doc.generate_pdf(
-            os.path.join(temp_dir, "test_document"), clean=True, clean_tex=True
+        # Write LaTeX content
+        with open(tex_file, 'w') as f:
+            f.write(latex_content)
+
+        # Try to compile
+        result = subprocess.run(
+            ["pdflatex", "-interaction=nonstopmode", tex_file],
+            cwd=temp_dir,
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(f"pdflatex compilation failed: {result.stderr}")
+
+    except FileNotFoundError:
+        raise RuntimeError(
+            "Your system must have pdflatex installed to run this pipeline. "
+            "Please install TeX Live or MiKTeX."
         )
     except Exception as e:
         raise RuntimeError(
-            f"Your system must have pdflatex installed to run this pipeline: {e}"
+            f"Error checking pdflatex: {e}"
         )
+    finally:
+        # Clean up
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def check_tools():
@@ -49,9 +72,13 @@ def check_tools():
     ]
 
     if missing_tools:
-        raise RuntimeError(
-            f"The following tools are not installed on {system}: {', '.join(missing_tools)}"
-        )
+        print(f"⚠️  Warning: The following tools are not installed on {system}: {', '.join(missing_tools)}")
+        print("These tools are optional but improve PDF to image conversion quality.")
+        if system == "Darwin":  # macOS
+            print("To install, run: brew install poppler cairo")
+        elif system == "Linux":
+            print("To install, run: sudo apt-get install poppler-utils cairo")
+        print("Continuing without these tools...")
 
 
 class TimeoutException(Exception):
@@ -163,7 +190,6 @@ class GenerateDiagram(SuperStep):
         code_and_images = combined.map(
             execute_code_and_generate_image,
             lazy=False,
-            save_num_proc=NUM_RENDER_WORKERS,
             name="Generate Images",
         )
 

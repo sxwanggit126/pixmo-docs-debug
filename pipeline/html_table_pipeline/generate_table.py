@@ -126,7 +126,6 @@ class GenerateTable(SuperStep):
         code_and_images = combined.map(
             execute_code_and_generate_image,
             lazy=False,
-            save_num_proc=NUM_RENDER_WORKERS,
             name="Generate Images",
         )
 

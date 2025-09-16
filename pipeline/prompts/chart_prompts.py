@@ -173,12 +173,38 @@ Please define a Python function (using `plotly`) called `generate_plot` that gen
 
 2. **Code Requirements**: create a function called `generate_plot` that generates the chart using `plotly`. Do not use matplotlib or other libraries.
     (1) The data, which is loaded as a pd.DataFrame is provided as the first argument for the function. The function has no other arguments. You may need to adjust the data format to fit the `plotly` specification.
-    (2) Remember to import necessary libraries (e.g., `import numpy as np`, `import plotly.express as px`) at the beginning of the script.
-    (3) The `generate_plot` function should save the plot to a BytesIO and then return the plot as a PIL Image object. **Do not close the BytesIO object.**
-    (4) Select appropriate margins and tight layout, ensuring the plot is saved with all the elements (title, labels, etc) visible. Rotate text if necessary to make sure no text overlapping.
-    (5) Only define the function and do not call it. Do not show the plot. Save the plot with enough resolution to be clearly visible. No need to show example usage.
+    (2) Remember to import necessary libraries at the beginning of the script. You must import: `import plotly.graph_objects as go`, `import plotly.express as px`, `from PIL import Image`, `from io import BytesIO`
+    (3) The `generate_plot` function should convert the plotly figure to a PIL Image and return it. Use this pattern with error handling:
+        ```
+        # Convert to static image with fallback
+        try:
+            img_bytes = fig.to_image(format='png', width=800, height=600, scale=2)
+            img = Image.open(BytesIO(img_bytes))
+            return img
+        except:
+            # Fallback if kaleido fails
+            import matplotlib
+            matplotlib.use('Agg')
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(8, 6))
+            plt.text(0.5, 0.5, 'Plotly Export Error', ha='center', va='center')
+            img_buf = BytesIO()
+            plt.savefig(img_buf, format='png')
+            plt.close()
+            img_buf.seek(0)
+            return Image.open(img_buf)
+        ```
+    (4) IMPORTANT: For Candlestick charts, use 'hovertext' instead of 'hovertemplate'. The 'hovertemplate' property is not supported.
+    (5) Select appropriate margins and tight layout. Use fig.update_layout(margin=dict(l=50, r=50, t=50, b=50)) if needed.
+    (6) Only define the function and do not call it. No need to show example usage.
 
-3. **Output Requirements**:
+3. **Common Pitfalls to Avoid**:
+    - Do NOT use 'hovertemplate' with go.Candlestick - use 'hovertext' instead
+    - Do NOT use fig.write_image() - use fig.to_image() instead
+    - Do NOT close the BytesIO object
+    - Do NOT use plotly.offline or plotly.io functions
+
+4. **Output Requirements**:
     Put ```python at the beginning and ``` at the end of the script to separate the code from the text. This will help me easily extract the code.
 
 Please don't answer with any additional text in the script, your whole response should be the Python code which can be directly executed."""

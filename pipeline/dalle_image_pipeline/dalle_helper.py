@@ -4,6 +4,10 @@ import random
 import warnings
 import pandas as pd
 from io import BytesIO
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 import openai
 import requests
@@ -21,9 +25,22 @@ from datadreamer.utils.fingerprint_utils import stable_fingerprint
 
 
 def _generate_dalle_image_with_description(api_key, description):
-    client = openai.OpenAI(
-        api_key=api_key,
-    )
+    # Check API mode from environment
+    api_mode = os.getenv("API_MODE", "official")
+
+    if api_mode == "official":
+        # Official API mode
+        client = openai.OpenAI(
+            api_key=api_key,
+            base_url=os.getenv("OPENAI_BASE_URL")
+        )
+    else:
+        # Proxy mode - use proxy configuration
+        client = openai.OpenAI(
+            api_key=os.getenv("PROXY_API_KEY"),
+            base_url=os.getenv("PROXY_BASE_URL")
+        )
+
     rand = random.Random(description)
     response = client.images.generate(
         model="dall-e-3",

@@ -1,4 +1,11 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Apply DataDreamer patches before importing anything else
+from pipeline.utils.datadreamer_patches import *
 
 from pipeline.utils.anthropic_support import CustomAnthropic
 
@@ -46,23 +53,55 @@ def run_datadreamer_session(args):
         os.environ["GENERATE_QA"] = "false"
  
     with DataDreamer("./session_output"):
-        # Load GPT-4
-        gpt_4o = OpenAI(
-            model_name="gpt-4o",
-            api_key=args.openai_api_key,
-            system_prompt="You are a helpful data scientist.",
-        )
+        # Get API mode and model configurations from environment
+        api_mode = os.getenv("API_MODE", "official")
+        openai_model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        openai_mini_model = os.getenv("OPENAI_MINI_MODEL", "gpt-4o-mini")
+        anthropic_model = os.getenv("ANTHROPIC_MODEL", "claude-3-7-sonnet-20250219")
 
-        gpt_4o_mini = OpenAI(
-            model_name="gpt-4o-mini",
-            api_key=args.openai_api_key,
-            system_prompt="You are a helpful data scientist.",
-        )
+        print(f"API Mode: {api_mode}")
+        print(f"Models - OpenAI: {openai_model}, OpenAI Mini: {openai_mini_model}, Anthropic: {anthropic_model}")
 
-        claude_sonnet = CustomAnthropic(
-            model_name="claude-3-7-sonnet-20250219",
-            api_key=args.anthropic_api_key,
-        )
+        if api_mode == "official":
+            # Official API mode - use direct API access
+            gpt_4o = OpenAI(
+                model_name=openai_model,
+                api_key=args.openai_api_key,
+                system_prompt="You are a helpful data scientist.",
+                base_url=os.getenv("OPENAI_BASE_URL")
+            )
+
+            gpt_4o_mini = OpenAI(
+                model_name=openai_mini_model,
+                api_key=args.openai_api_key,
+                system_prompt="You are a helpful data scientist.",
+                base_url=os.getenv("OPENAI_BASE_URL")
+            )
+
+            claude_sonnet = CustomAnthropic(
+                model_name=anthropic_model,
+                api_key=args.anthropic_api_key,
+                base_url=os.getenv("ANTHROPIC_BASE_URL")
+            )
+        else:
+            # Proxy mode - use unified proxy API for all models
+            from pipeline.utils.proxy_llm_fixed import ProxyLLM
+
+            gpt_4o = ProxyLLM(
+                model_name=openai_model,
+                system_prompt="You are a helpful data scientist."
+            )
+
+            gpt_4o_mini = ProxyLLM(
+                model_name=openai_mini_model,
+                system_prompt="You are a helpful data scientist."
+            )
+
+            # In proxy mode, Claude also uses ProxyLLM
+            claude_sonnet = ProxyLLM(
+                model_name=anthropic_model,
+                system_prompt="You are a helpful data scientist."
+            )
 
         if args.llm == "gpt-4o": llm = gpt_4o
         elif args.llm == "claude-3-7-sonnet-20250219": llm = claude_sonnet

@@ -67,7 +67,6 @@ class GenerateImage(SuperStep):
         code_and_images = combined.map(
             generate_image,
             lazy=False,
-            save_num_proc=NUM_RENDER_WORKERS,
             name="Generate Images",
         )
 

@@ -1,7 +1,11 @@
 .DS_Store
 .mypy_cache/
 .ruff_cache/
+.venv/
 __pycache__/
+.env
+.env.local
+.env.*.local
 *.sh
 venv/
 session_output/

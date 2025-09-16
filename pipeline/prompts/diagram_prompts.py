@@ -183,6 +183,7 @@ Here are the requirements:
     (1) You need to hardcode the provided data into the Mermaid script to generate the diagram. Be careful with the syntax and formatting of the Mermaid script. You can reformat or select a subset of the data to fit the Mermaid syntax.
     (2) Choose appropriate Mermaid types based on the diagram type and data. Available types include: flowchart, sequenceDiagram, classDiagram, stateDiagram, erDiagram, gantt, journey, quadrantChart, mindmap, timeline, etc.
     (3) Do not try to add icons or images to the diagram. Only use the built-in Mermaid features. Don't use any style syntax in the Mermaid code.
+    (4) **IMPORTANT for Gantt charts**: Use proper date formats (YYYY-MM-DD) and durations. Never use relative dates like "60d". Instead use "after taskname, 60d" or specific dates like "2024-01-01, 2024-03-01".
 
 3. **Output Requirements**:
     Put ```mermaid at the beginning and ``` at the end of the script to separate the code from the text. This will help me easily extract the code.

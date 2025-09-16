@@ -1,6 +1,7 @@
 import os
 import tempfile
 import json
+import random
 import warnings
 import pandas as pd
 from io import StringIO
@@ -52,6 +53,8 @@ class GenerateChart(SuperStep):
             },
         )
 
+        # Plotly doesn't use matplotlib styles
+
         # Create prompts
         prompts_dataset = combined_inputs.map(
             lambda row: {
@@ -89,22 +92,30 @@ class GenerateChart(SuperStep):
             combined_inputs, generated_code, name="Combine with inputs"
         ).save(name="Save combine with inputs")
 
+        # Generate Images
         def execute_code_and_generate_image(row, timeout=20):
             original_dir = os.getcwd()
             os.chdir(tempfile.mkdtemp())
             signal.signal(signal.SIGALRM, timeout_handler)
             signal.alarm(timeout)  # set the timeout
-            
+
             try:
+                # Add necessary imports to the execution environment
+                from io import BytesIO, StringIO
+                from PIL import Image
+                import pandas as pd
+
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
+                    # Execute the generated code
                     exec(row["code"], globals())
+                    # Call the generate_plot function
                     image = generate_plot(pd.read_csv(StringIO(row["data"]))) # noqa: F821
                     globals().pop("generate_plot", None)
-                    
+
                     if not isinstance(image, Image.Image):
-                        raise TypeError()
-                    
+                        raise TypeError(f"Expected PIL Image, got {type(image)}")
+
                     row["image"] = process_image(image)
             except TimeoutException:
                 print(f"Error: Code execution exceeded {timeout} seconds.")
@@ -115,13 +126,12 @@ class GenerateChart(SuperStep):
             finally:
                 signal.alarm(0)  # disable the alarm
                 os.chdir(original_dir)
-            
+
             return row
 
         code_and_images = combined.map(
             execute_code_and_generate_image,
             lazy=False,
-            save_num_proc=NUM_RENDER_WORKERS,
             name="Generate Images",
         )
 

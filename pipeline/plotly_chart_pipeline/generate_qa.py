@@ -52,11 +52,25 @@ class GenerateChartQA(SuperStep):
             name="Create Generate Q&A Prompts",
         )
 
+        # Debug: Print available columns
+        print(f"DEBUG: qa_prompts_dataset columns: {qa_prompts_dataset.output.column_names}")
+
+        # Try accessing the data directly
+        prompts_data = []
+        for row in qa_prompts_dataset.output:
+            prompts_data.append(row["prompt"] if "prompt" in row else row.get("prompt", ""))
+
+        # Create a new DataSource with prompts
+        prompts_source = DataSource(
+            "Create prompts source",
+            {"prompts": prompts_data}
+        )
+
         # Generate Q&A
         generated_qa = Prompt(
             name="Generate Q&A",
             inputs={
-                "prompts": qa_prompts_dataset.output["prompt"],
+                "prompts": prompts_source.output["prompts"],
             },
             args={
                 "llm": self.args["llm"],
@@ -90,7 +104,7 @@ class GenerateChartQA(SuperStep):
                     qa.append(qa_obj)
             row["qa"] = json.dumps(qa)
             return row
-        
+
         combined_processed = combined.map(
             process_qa,
             lazy=False,

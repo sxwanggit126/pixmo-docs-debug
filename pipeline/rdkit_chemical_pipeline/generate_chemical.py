@@ -89,7 +89,6 @@ class GenerateChemical(SuperStep):
         code_and_images = combined_inputs.map(
             execute_code_and_generate_image,
             lazy=False,
-            save_num_proc=NUM_RENDER_WORKERS,
             name="Generate Images",
         )
 

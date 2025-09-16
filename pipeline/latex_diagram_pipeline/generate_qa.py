@@ -44,7 +44,11 @@ class GenerateDiagramQA(SuperStep):
         qa_prompts_dataset = combined_inputs.map(
             lambda row: {
                 "prompt": GENERATE_DIAGRAM_QA_PROMPT.format(
-                    topic=row["topic"], data=row["data"], code=row["code"], persona=json.loads(row["metadata"])["persona"]
+                    topic=row["topic"],
+                    data=row["data"],
+                    code=row["code"],
+                    persona=json.loads(row["metadata"])["persona"],
+                    figure_type=json.loads(row["metadata"])["figure_type"]
                 )
             },
             remove_columns=["image"],

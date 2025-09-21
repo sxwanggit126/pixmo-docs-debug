@@ -1,15 +1,49 @@
-.DS_Store
-.mypy_cache/
-.ruff_cache/
-.venv/
+# Jupyter Notebook
+*/.ipynb_checkpoints
+.ipynb_checkpoints
+*.ipynb
+*.pyc
+
+# Pandas AI
+cache/*
+exports/*
+chromadb/*
+
+# log
+*.log
+
+
+# bak
+*.bak.py
+
+# csv
+*.csv
+
+# json
+*.json
+
+# env
+*.env
+
+# audio
+*.wav
+*.mp3
+*.m4a
+
+# jupyter
+*.ipynb
+
+# pycache
+*__pycache__*
+
+# 环境变量
+.venv/*
+
+# uv环境
+.python-version
+pyproject.toml
+uv.lock
+
+.idea/
 __pycache__/
-.env
-.env.local
-.env.*.local
-*.sh
-venv/
 session_output/
-*.png
-*.html
-*.pdf
-selected_personas.txt

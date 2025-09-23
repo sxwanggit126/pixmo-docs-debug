@@ -31,7 +31,7 @@ pip install -r requirements.txt
 在项目根目录创建 `.env` 文件，配置您的 API 密钥：
 
 ```bash
-# API 模式: "official" 或 "proxy"
+# API 模式: "official" 或 "proxy" 或 "azure"
 API_MODE=official
 
 # 官方 API 密钥
@@ -44,6 +44,16 @@ PROXY_API_KEY=your-proxy-key
 PROXY_BASE_URL=https://api.openrouter.ai/v1
 OPENAI_MODEL=gpt-4o
 ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+
+# azure
+AZURE_OPENAI_TENANT_ID=
+AZURE_OPENAI_CLIENT_ID=
+AZURE_OPENAI_CLIENT_SECRET=
+AZURE_OPENAI_ENDPOINT=
+AZURE_OPENAI_API_VERSION=
+AZURE_OPENAI_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_MINI_DEPLOYMENT=gpt-4o
+AZURE_ANTHROPIC_DEPLOYMENT=gpt-4o
 ```
 
 ### 系统依赖

@@ -10,17 +10,18 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from threadpoolctl import threadpool_limits
 
+
 def contains_chinese(text):
     # Check if the text contains any Chinese characters
     return bool(re.search("[\u4e00-\u9FFF]", text))
 
 
 # load the personas
+# 修改后允许中文persona
 PERSONAS = []
 with open("./pipeline/persona.jsonl", "r") as f:
     for line in f:
-        if not contains_chinese(line): PERSONAS.append(json.loads(line)["persona"])
-        else: continue
+        PERSONAS.append(json.loads(line)["persona"])
 
 
 def is_json_valid(json_str):
@@ -157,9 +158,11 @@ def randomize_matplorlib_code(code):
 
     styles_for_randomization = []
     for style in available_styles:
-        if "dark_background" in style: continue
-        else: styles_for_randomization.append(style)
-    
+        if "dark_background" in style:
+            continue
+        else:
+            styles_for_randomization.append(style)
+
     random.seed(len(code))
     random.shuffle(styles_for_randomization)
 
@@ -171,7 +174,7 @@ def randomize_matplorlib_code(code):
                     STYLE_IS_VALID = True
                     break
             if not STYLE_IS_VALID:
-                indent = len(line) - len(line.lstrip()) # check how many indents are there
+                indent = len(line) - len(line.lstrip())  # check how many indents are there
                 random_style = random.choice(styles_for_randomization)
                 new_lines.append(f"{' ' * indent}plt.style.use('{random_style}')")
             else:
@@ -183,7 +186,7 @@ def randomize_matplorlib_code(code):
 
 
 def is_csv_valid(csv_str):
-    try:   
+    try:
         # return False if there are less than 2 lines
         lines = csv_str.split("\n")
         if len(lines) < 2: return False
@@ -230,6 +233,8 @@ def extract_SMILES(input_string):
 
 
 from rdkit import Chem
+
+
 def is_SMILE_valid(smiles):
     """
     Check if the given SMILES representation is valid.
@@ -349,7 +354,7 @@ def extract_point_html(input_string):
         lines_match = re.search(f"<modified_lines_{i}>(.*)</modified_lines_{i}>", input_string, re.DOTALL)
 
         try:
-            if lines_match: 
+            if lines_match:
                 extracted_lines = lines_match.group(1).strip()
                 point_example["modified_lines"] = []
                 for line in extracted_lines.split("\n"):
@@ -357,7 +362,7 @@ def extract_point_html(input_string):
                         original, modified = line.split("-->")
                         point_example["modified_lines"].append((original.strip(), modified.strip()))
         except ValueError:
-            continue # Skip if invalid formatting
+            continue  # Skip if invalid formatting
 
         point_examples.append(point_example)
 
@@ -383,7 +388,7 @@ def compute_major_px_ratio(image):
             px_count[px] += 1
         else:
             px_count[px] = 1
-    
+
     max_px = max(px_count, key=px_count.get)
     return px_count[max_px] / len(image.getdata())
 
@@ -392,7 +397,7 @@ def process_image(image, max_size=(2560, 1440), major_px_threshold=0.95, aspect_
     # Resize the image if it exceeds the maximum size
     if image.size[0] * image.size[1] > max_size[0] * max_size[1]:
         image.thumbnail(max_size, Image.Resampling.LANCZOS)
-    
+
     # Convert alpha channel to white background
     if image.mode in ('RGBA', 'LA') or (image.mode == 'P' and 'transparency' in image.info):
         alpha = image.convert('RGBA').split()[-1]
@@ -401,7 +406,7 @@ def process_image(image, max_size=(2560, 1440), major_px_threshold=0.95, aspect_
         image = bg.convert("RGB")
     else:
         image = image.convert("RGB")
-    
+
     major_px_ratio = compute_major_px_ratio(image)
     if major_px_ratio > major_px_threshold: print("Warning: Image is monochromatic.", major_px_ratio); return None
 
@@ -414,7 +419,7 @@ def process_image(image, max_size=(2560, 1440), major_px_threshold=0.95, aspect_
     if min(width, height) < 128 and filter_small: print("Warning: Image is too small."); return None
 
     image_from_byte_array = Image.frombytes("RGB", (width, height), byte_array)
-    
+
     return image_from_byte_array
 
 
@@ -429,7 +434,7 @@ def fix_latex_white_text(code):
                         "{240,128,128}",
                         "{221,160,221}",
                         "{255,160,122}"]
-    
+
     HEX_replacements = ["808080",
                         "2980B9",
                         "0066CC",
@@ -446,7 +451,7 @@ def fix_latex_white_text(code):
     if "{255,255,255}" in code:
         code = code.replace("{255,255,255}", random.choice(RGB_replacements))
         fix = True
-    
+
     if "FFFFFF" in code:
         code = code.replace("FFFFFF", random.choice(HEX_replacements))
         fix = True
@@ -457,7 +462,7 @@ def fix_latex_white_text(code):
 def extract_points(image, point_color="#FF69B4"):
     # Bug with numpy causes process to freeze when using multiple threads for parallel processing due to buggy OpenBLAS implementation installed
     # https://github.com/numpy/numpy/issues/17752#issuecomment-1359079118
-    with threadpool_limits(limits=1, user_api='blas'): 
+    with threadpool_limits(limits=1, user_api='blas'):
         # input is a image with some points with the color of point_color
         # output is a list of (x, y) coordinates of the points
         # the idea is to do some clustering that pixels with the color of point_color that are connected will be considered as one point
@@ -483,7 +488,8 @@ def extract_points(image, point_color="#FF69B4"):
         points = list(map(tuple, points))
         groups = [[points[0]]]
         if len(points) > 1500:
-            print(f"Warning: Extracted {len(points)} pixels for the point color from the image. Too many random pixels match the point color {point_color} in {image}, so this point for this image will be skipped.")
+            print(
+                f"Warning: Extracted {len(points)} pixels for the point color from the image. Too many random pixels match the point color {point_color} in {image}, so this point for this image will be skipped.")
             raise RuntimeError("Skip the current point because too many random pixels match the point's color.")
 
         for point in points[1:]:
@@ -495,16 +501,17 @@ def extract_points(image, point_color="#FF69B4"):
                     break
             if not connected:
                 groups.append([point])
-        
+
         # get the center of each group
         centers = []
         for group in groups:
             group = np.array(group)
             center = np.mean(group, axis=0)
             centers.append(center.tolist())
-        
+
         # normalized points will be (x,y) coordinates in the range of [0, 100], upper left corner is (0, 0)
-        normalized_centers = [{"x": round(center[1] / height * 100, 1), "y": round(center[0] / width * 100, 1)} for center in centers]
+        normalized_centers = [{"x": round(center[1] / height * 100, 1), "y": round(center[0] / width * 100, 1)} for
+                              center in centers]
         return centers, normalized_centers
 
 
@@ -588,20 +595,20 @@ def modify_html(html_code, modified_lines):
                 replaced = True
                 break
         if not replaced: updated_html.append(line)
-        
+
     return "\n".join(updated_html)
 
 
 def draw_points(image, list_of_points):
     # make a copy of the image
     image = image.copy()
-    
+
     # Define colors for PIL in RGB format
-    colors = ["#FF0000", "#008000", "#0000FF", "#FFFF00", "#FFC0CB", 
+    colors = ["#FF0000", "#008000", "#0000FF", "#FFFF00", "#FFC0CB",
               "#FFA500", "#800080", "#00FFFF", "#A52A2A", "#00FF00"]
-    
+
     draw = ImageDraw.Draw(image)
-    
+
     for i, points in enumerate(list_of_points):
         color = colors[i % len(colors)]  # Loop through colors if there are more points than colors
         for point in points:
@@ -610,7 +617,7 @@ def draw_points(image, list_of_points):
             draw.ellipse((x - 10, y - 10, x + 10, y + 10), fill=color)
 
     return image
-            
+
 
 if __name__ == "__main__":
     # Test the image processing function

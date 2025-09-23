@@ -29,7 +29,8 @@ def validate_config():
             print(f"  {', '.join(missing_vars)}")
             print(f"\nPlease set these variables in your .env file or environment.")
             return False
-    else:
+
+    elif api_mode == "proxy":
         # Check proxy API requirements
         required_vars = ["PROXY_API_KEY", "PROXY_BASE_URL"]
         missing_vars = [var for var in required_vars if not os.getenv(var)]
@@ -39,6 +40,40 @@ def validate_config():
             print(f"  {', '.join(missing_vars)}")
             print(f"\nPlease set these variables in your .env file or environment.")
             return False
+
+    elif api_mode == "azure":
+        # Check Azure OpenAI requirements
+        required_vars = [
+            "AZURE_OPENAI_TENANT_ID",
+            "AZURE_OPENAI_CLIENT_ID",
+            "AZURE_OPENAI_CLIENT_SECRET",
+            "AZURE_OPENAI_ENDPOINT",
+            "AZURE_OPENAI_API_VERSION"
+        ]
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+
+        if missing_vars:
+            print(f"\nERROR: Missing required environment variables for Azure mode:")
+            print(f"  {', '.join(missing_vars)}")
+            print(f"\nPlease set these variables in your .env file or environment.")
+            return False
+
+        # Check deployment mappings
+        deployment_vars = [
+            "AZURE_OPENAI_DEPLOYMENT",
+            "AZURE_OPENAI_MINI_DEPLOYMENT",
+            "AZURE_ANTHROPIC_DEPLOYMENT"
+        ]
+        missing_deployments = [var for var in deployment_vars if not os.getenv(var)]
+
+        if missing_deployments:
+            print(f"\nWARNING: Missing Azure deployment mappings:")
+            print(f"  {', '.join(missing_deployments)}")
+            print(f"Default deployment names will be used.")
+
+    else:
+        print(f"\nERROR: Invalid API_MODE '{api_mode}'. Valid options: official, proxy, azure")
+        return False
 
     # Display model configuration
     print(f"\nModel Configuration:")
@@ -50,8 +85,17 @@ def validate_config():
         print(f"\nAPI Endpoints:")
         print(f"  OpenAI: {os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1 (default)')}")
         print(f"  Anthropic: {os.getenv('ANTHROPIC_BASE_URL', 'https://api.anthropic.com (default)')}")
-    else:
+    elif api_mode == "proxy":
         print(f"\nProxy Endpoint: {os.getenv('PROXY_BASE_URL')}")
+    elif api_mode == "azure":
+        print(f"\nAzure Configuration:")
+        print(f"  Endpoint: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
+        print(f"  API Version: {os.getenv('AZURE_OPENAI_API_VERSION')}")
+        print(f"  Tenant ID: {os.getenv('AZURE_OPENAI_TENANT_ID', 'Not set')}")
+        print(f"\nAzure Deployments:")
+        print(f"  OpenAI Deployment: {os.getenv('AZURE_OPENAI_DEPLOYMENT', 'gpt-4o (default)')}")
+        print(f"  OpenAI Mini Deployment: {os.getenv('AZURE_OPENAI_MINI_DEPLOYMENT', 'gpt-4o-mini (default)')}")
+        print(f"  Anthropic Deployment: {os.getenv('AZURE_ANTHROPIC_DEPLOYMENT', 'gpt-4 (default)')}")
 
     print(f"\n=== Configuration Valid ===\n")
     return True

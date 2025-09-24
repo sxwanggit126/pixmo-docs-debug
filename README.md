@@ -4,6 +4,7 @@
 这是 [PixMo-Docs](https://huggingface.co/datasets/allenai/pixmo-docs)、[CoSyn-400K](https://huggingface.co/datasets/allenai/CoSyn-400K) 和 [CoSyn-point](https://huggingface.co/datasets/allenai/CoSyn-point) 数据集生成系统的代码仓库。PixMo-Docs 被用于训练 [Molmo](https://arxiv.org/abs/2409.17146) 模型，而 CoSyn 数据集是使用改进的流程和更多类型文档的扩展版本。更多细节可以在我们的[论文](https://arxiv.org/pdf/2502.14846)中找到。
 
 ## 新增功能
+- **支持gpt-4.1**: fix bug 确保DataDreamer始终使用 /chat/completions API
 - **arrow文件转成jsonl格式**: 把代码生成的合成数据转变成jsonl格式
 ```shell
 # 自动发现session_output目录下数据集
@@ -51,9 +52,9 @@ AZURE_OPENAI_CLIENT_ID=
 AZURE_OPENAI_CLIENT_SECRET=
 AZURE_OPENAI_ENDPOINT=
 AZURE_OPENAI_API_VERSION=
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
-AZURE_OPENAI_MINI_DEPLOYMENT=gpt-4o
-AZURE_ANTHROPIC_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_DEPLOYMENT=gpt-4.1
+AZURE_OPENAI_MINI_DEPLOYMENT=gpt-4.1
+AZURE_ANTHROPIC_DEPLOYMENT=gpt-4.1
 ```
 
 ### 系统依赖

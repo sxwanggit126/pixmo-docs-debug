@@ -1,5 +1,6 @@
 """
 Azure OpenAI LLM support for DataDreamer with Azure AD authentication
+支持 GPT-4.1 等新模型
 """
 
 import os
@@ -76,6 +77,7 @@ class AzureTokenManager:
 class AzureLLM(OpenAI):
     """
     Azure OpenAI LLM 类，支持 Azure AD 认证和模型部署映射
+    完全支持 GPT-4.1 等新模型
     """
 
     def __init__(self, model_name, system_prompt=None, **kwargs):
@@ -106,9 +108,20 @@ class AzureLLM(OpenAI):
         # 构建 Azure OpenAI 端点 URL
         base_url = f"{self.endpoint.rstrip('/')}/openai/deployments/{self.deployment_name}"
 
-        # 初始化父类，使用 Azure AD token 作为 API key
+        # GPT-4.1 需要更新的 API 版本
+        if "gpt-4.1" in model_name.lower():
+            self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-01-preview")
+            logger.info(f"Using updated API version for GPT-4.1: {self.api_version}")
+
+        # 修复 DataDreamer 的模型名称识别问题
+        # DataDreamer 无法识别 gpt-4.1 为 chat 模型，所以我们传递一个它能识别的名称
+        datadreamer_model_name = self._get_datadreamer_compatible_name(model_name)
+
+        logger.info(f"Model mapping: {model_name} -> deployment: {self.deployment_name}, datadreamer: {datadreamer_model_name}")
+
+        # 初始化父类，使用 DataDreamer 兼容的模型名称
         super().__init__(
-            model_name=self.deployment_name,  # Azure 使用部署名称
+            model_name=datadreamer_model_name,  # 使用 DataDreamer 兼容名称
             api_key=self.token_manager.get_token(),  # 使用 Azure AD token
             base_url=base_url,
             system_prompt=system_prompt,
@@ -119,25 +132,43 @@ class AzureLLM(OpenAI):
         logger.info(f"Initialized AzureLLM: {model_name} -> {self.deployment_name}")
         logger.info(f"Azure endpoint: {base_url}")
 
+    def _get_datadreamer_compatible_name(self, model_name):
+        """
+        将模型名称转换为 DataDreamer 能识别的名称
+        统一使用 gpt-4-preview，因为我们不会使用 GPT-3 系列模型
+        """
+        # 统一返回 gpt-4-preview，DataDreamer 会将其识别为 chat 模型
+        return "gpt-4-preview"
+
     def _get_deployment_mapping(self):
         """获取模型名称到 Azure 部署名称的映射"""
         return {
+            # 常用模型的显式映射（如果部署名称与模型名称不同）
             "gpt-4o": os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
             "gpt-4o-mini": os.getenv("AZURE_OPENAI_MINI_DEPLOYMENT", "gpt-4o-mini"),
-            "claude-sonnet": os.getenv("AZURE_ANTHROPIC_DEPLOYMENT", "gpt-4"),  # Fallback to GPT-4
-            "claude-3-sonnet": os.getenv("AZURE_ANTHROPIC_DEPLOYMENT", "gpt-4"),
-            "claude-3-7-sonnet-20250219": os.getenv("AZURE_ANTHROPIC_DEPLOYMENT", "gpt-4"),
-            # 可以添加更多映射
+            "claude-sonnet": os.getenv("AZURE_ANTHROPIC_DEPLOYMENT", "gpt-4o"),
+            "claude-3-sonnet": os.getenv("AZURE_ANTHROPIC_DEPLOYMENT", "gpt-4o"),
+            "claude-3-7-sonnet-20250219": os.getenv("AZURE_ANTHROPIC_DEPLOYMENT", "gpt-4o"),
         }
 
     def _get_deployment_name(self, model_name):
         """根据模型名称获取对应的 Azure 部署名称"""
-        deployment_name = self.deployment_mapping.get(model_name, model_name)
+        # 先检查映射表
+        deployment_name = self.deployment_mapping.get(model_name)
+
+        # 如果映射表中没有，直接使用模型名称作为部署名称（假设部署名称 = 模型名称）
+        if deployment_name is None:
+            deployment_name = model_name
+            logger.info(f"No explicit mapping for '{model_name}', using model name as deployment name")
 
         # 如果是 Claude 模型但没有对应的 Azure 部署，记录警告
         if "claude" in model_name.lower() and deployment_name.startswith("gpt"):
             logger.warning(f"Claude model '{model_name}' mapped to GPT deployment '{deployment_name}' "
                           "as Claude is not available on Azure OpenAI")
+
+        # 检查 GPT-4.1 映射
+        if "gpt-4.1" in model_name.lower():
+            logger.info(f"GPT-4.1 model '{model_name}' mapped to deployment '{deployment_name}'")
 
         return deployment_name
 
@@ -154,7 +185,7 @@ class AzureLLM(OpenAI):
             self.client.default_headers["Authorization"] = f"Bearer {new_token}"
 
     def run(self, prompts, **kwargs):
-        """重写 run 方法以处理 Azure 特定的逻辑"""
+        """重写 run 方法以处理 Azure 特定的逻辑和 GPT-4.1 支持"""
 
         # 确保令牌是最新的
         self._refresh_client_token()
@@ -164,7 +195,7 @@ class AzureLLM(OpenAI):
             original_create = self.client.chat.completions.create
 
             def azure_create(**create_kwargs):
-                # 确保使用正确的部署名称
+                # 确保使用正确的 Azure 部署名称，而不是 DataDreamer 兼容名称
                 create_kwargs['model'] = self.deployment_name
 
                 # 添加 Azure 特定的参数
@@ -173,8 +204,22 @@ class AzureLLM(OpenAI):
 
                 create_kwargs['extra_headers']['api-version'] = self.api_version
 
+                # GPT-4.1 特殊处理
+                if "gpt-4.1" in self._original_model_name:
+                    # GPT-4.1 支持更大的上下文窗口和特殊参数
+                    if 'max_tokens' not in create_kwargs:
+                        # GPT-4.1 默认可以使用更多 tokens
+                        create_kwargs['max_tokens'] = min(8192, kwargs.get("max_tokens", 4096))
+
+                    # 可能的 GPT-4.1 特定参数
+                    if 'reasoning_effort' in kwargs:
+                        create_kwargs['reasoning_effort'] = kwargs['reasoning_effort']
+
+                    logger.debug(f"GPT-4.1 request: deployment={self.deployment_name}, "
+                               f"max_tokens={create_kwargs.get('max_tokens')}")
+
                 logger.debug(f"Azure OpenAI request: deployment={self.deployment_name}, "
-                           f"api-version={self.api_version}")
+                           f"api-version={self.api_version}, original_model={self._original_model_name}")
 
                 try:
                     return original_create(**create_kwargs)
@@ -185,6 +230,13 @@ class AzureLLM(OpenAI):
                         self._refresh_client_token()
                         create_kwargs['extra_headers']['Authorization'] = f"Bearer {self.token_manager.get_token()}"
                         return original_create(**create_kwargs)
+                    # 如果是模型不存在的错误，给出更有用的错误信息
+                    elif "DeploymentNotFound" in str(e) or "NotFound" in str(e):
+                        logger.error(f"Deployment '{self.deployment_name}' not found. "
+                                   f"Please check your Azure OpenAI deployment configuration.")
+                        raise ValueError(f"Azure deployment '{self.deployment_name}' for model "
+                                       f"'{self._original_model_name}' not found. Please check your "
+                                       f"deployment configuration in the Azure portal.")
                     else:
                         raise
 

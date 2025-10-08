@@ -393,7 +393,7 @@ def compute_major_px_ratio(image):
     return px_count[max_px] / len(image.getdata())
 
 
-def process_image(image, max_size=(2560, 1440), major_px_threshold=0.95, aspect_ratio_threshold=5, filter_small=True):
+def process_image(image, max_size=(2560, 1440), major_px_threshold=0.95, aspect_ratio_threshold=None, filter_small=True):
     # Resize the image if it exceeds the maximum size
     if image.size[0] * image.size[1] > max_size[0] * max_size[1]:
         image.thumbnail(max_size, Image.Resampling.LANCZOS)
@@ -414,8 +414,10 @@ def process_image(image, max_size=(2560, 1440), major_px_threshold=0.95, aspect_
     width, height = image.size
 
     aspect_ratio = max(width, height) / min(width, height)
-    if aspect_ratio > aspect_ratio_threshold: print("Warning: Image aspect ratio is too high."); return None
-
+    if aspect_ratio_threshold is not None and aspect_ratio > aspect_ratio_threshold:
+        print(
+            f"Warning: Image aspect ratio is too high. Ratio: {aspect_ratio:.2f}, threshold: {aspect_ratio_threshold}")
+        return None
     if min(width, height) < 128 and filter_small: print("Warning: Image is too small."); return None
 
     image_from_byte_array = Image.frombytes("RGB", (width, height), byte_array)

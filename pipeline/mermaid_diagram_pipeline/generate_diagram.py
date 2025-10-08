@@ -100,17 +100,19 @@ class GenerateDiagram(SuperStep):
             os.chdir(tempfile.mkdtemp())
             signal.signal(signal.SIGALRM, timeout_handler)
             signal.alarm(timeout)  # set the timeout
-            
+
             try:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     image = render_mermaid(row["code"])
-                    
+
                     if not isinstance(image, Image.Image):
                         raise TypeError()
 
-                    row["image"] = crop_whitespace(process_image(image))
-                    
+                    row["image"] = crop_whitespace(process_image(
+                        image, aspect_ratio_threshold=None, filter_small=False)
+                    )
+
             except TimeoutException:
                 print(f"Error: Code execution exceeded {timeout} seconds.")
                 row["image"] = None
@@ -120,7 +122,7 @@ class GenerateDiagram(SuperStep):
             finally:
                 signal.alarm(0)  # disable the alarm
                 os.chdir(original_dir)
-            
+
             return row
 
         code_and_images = combined.map(

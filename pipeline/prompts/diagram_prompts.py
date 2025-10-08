@@ -166,32 +166,38 @@ Please don't answer with any additional text in the script. Your whole response 
 
 
 
-GENERATE_DIAGRAM_CODE_MERMAID_PROMPT = """You are an expert in data analysis and good at writing Mermaid code to generate diagrams and graphs.
-My persona is: "{persona}"
-I have some data about {topic} which can be used to generate a {figure_type}.
+GENERATE_DIAGRAM_CODE_MERMAID_PROMPT = """你是数据分析专家，擅长编写Mermaid代码来生成图表和图形。
+我的角色背景是："{persona}"
+我有一些关于{topic}的数据，可以用来生成{figure_type}。
 
-Here is the data:
+以下是数据：
 <data>
 {data}
 </data>
 
-Please write a Mermaid code to generate a {figure_type} using the data provided. Here are the requirements:
-Here are the requirements:
-1. **Style Requirements**:
-    (1) Try to be creative and change the default arguments (e.g., font, color, marker, etc) to make the graph style unique.
-    (2) Consider the **scale of data** to select the appropriate design scale (diagram size, node/edge size, etc) to ensure the information in the diagram is clear and easy to understand, with no text overlapping, etc.
+请编写Mermaid代码来生成{figure_type}，使用提供的数据。让我们一步步思考。
 
-2. **Code Requirements**:
-    (1) You need to hardcode the provided data into the Mermaid script to generate the diagram. Be careful with the syntax and formatting of the Mermaid script. You can reformat or select a subset of the data to fit the Mermaid syntax.
-    (2) Choose appropriate Mermaid types based on the diagram type and data. Available types include: flowchart, sequenceDiagram, classDiagram, stateDiagram, erDiagram, gantt, journey, quadrantChart, mindmap, timeline, etc.
-    (3) Do not try to add icons or images to the diagram. Only use the built-in Mermaid features. Don't use any style syntax in the Mermaid code.
-    (4) **IMPORTANT for Gantt charts**: Use proper date formats (YYYY-MM-DD) and durations. Never use relative dates like "60d". Instead use "after taskname, 60d" or specific dates like "2024-01-01, 2024-03-01".
+要求如下：
+1. **样式要求**：
+    (1) 尝试创新并改变默认参数（如字体、颜色、标记等），使图表样式独特。
+    (2) 考虑**数据规模**选择适当的设计比例（图表大小、节点/边缘大小等），确保图表中的信息清晰易懂，无文本重叠等。
 
-3. **Output Requirements**:
-    Put ```mermaid at the beginning and ``` at the end of the script to separate the code from the text. This will help me easily extract the code.
+2. **代码要求**：
+    (1) 你需要将提供的数据硬编码到Mermaid脚本中以生成图表。注意Mermaid脚本的语法和格式。你可以重新格式化或选择数据子集来适应Mermaid语法。
+    (2) 根据图表类型和数据选择适当的Mermaid类型。可用类型包括：flowchart、sequenceDiagram、classDiagram、stateDiagram、erDiagram、gantt、journey、quadrantChart、mindmap、timeline等。
+    (3) 不要尝试在图表中添加图标或图像。只使用Mermaid的内置功能。不要在Mermaid代码中使用任何样式语法。
+    (4) **甘特图重要提示**：使用正确的日期格式（YYYY-MM-DD）和持续时间。永远不要使用相对日期如"60d"。而是使用"after taskname, 60d"或具体日期如"2024-01-01, 2024-03-01"。
 
-Please don't answer with any additional text in the script. Your whole response should be the Mermaid code, which can be directly executed."""
+3. **语法检查要求**（重要）：
+    (1) **节点ID必须避免保留关键字**：不要使用end、start、class、style、subgraph、click、def等作为节点ID
+    (2) **使用简单的节点ID**：使用A、B、C、N1、N2等简单标识符
+    (3) **中文文本必须加引号**：使用A["中文文本"]格式
+    (4) **检查语法格式**：确保所有节点定义正确，箭头使用-->格式
 
+4. **输出要求**：
+    在脚本开头放置```mermaid，在结尾放置```，以便将代码与文本分开。这将帮助我轻松提取代码。
+
+请不要在脚本中添加任何额外的文本。你的整个回复应该是可以直接执行的Mermaid代码。请一步步思考并解决问题"""
 
 
 DIAGRAM_QUESTION_TYPES = [

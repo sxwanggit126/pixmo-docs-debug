@@ -251,30 +251,80 @@ def render_vegalite(vegalite_json):
 
 def render_mermaid(mermaid_code):
     scale = random.choice([2, 3])
-
     temp_dir = tempfile.mkdtemp()
     output_mmd = os.path.join(temp_dir, "diagram.mmd")
     output_image = os.path.join(temp_dir, "diagram.png")
 
-    # Save the Mermaid code to a temporary file
-    with open(output_mmd, "w") as file:
-        file.write(mermaid_code)
+    # Save the Mermaid code to a temporary file with UTF-8 encoding
+    try:
+        with open(output_mmd, "w", encoding='utf-8') as file:
+            file.write(mermaid_code)
 
-    # Call the Mermaid CLI to generate the diagram with the specified scale
-    subprocess.run(["mmdc", "-i", output_mmd, "-o", output_image, "-s", str(scale)])
+        print(f"=== Mermaid Code Debug ===")
+        print(f"Code length: {len(mermaid_code)}")
+        print(f"First 300 chars:\n{mermaid_code[:300]}")
+        print("=" * 30)
+
+    except Exception as e:
+        print(f"Error writing mermaid file: {e}")
+        raise
+
+    # Call the Mermaid CLI to generate the diagram with detailed error checking
+    try:
+        result = subprocess.run(
+            ["mmdc", "-i", output_mmd, "-o", output_image, "-s", str(scale)],
+            capture_output=True,
+            text=True,
+            timeout=30  # 添加超时
+        )
+
+        print(f"mmdc return code: {result.returncode}")
+
+        if result.returncode != 0:
+            print(f"=== Mermaid Error Debug ===")
+            print(f"STDERR: {result.stderr}")
+            print(f"STDOUT: {result.stdout}")
+            print(f"Failed code:\n{mermaid_code}")
+            print("=" * 30)
+            raise RuntimeError(f"Mermaid CLI failed with return code {result.returncode}")
+
+        if result.stderr:
+            print(f"Mermaid warnings: {result.stderr}")
+
+    except subprocess.TimeoutExpired:
+        print("Mermaid CLI timeout")
+        raise RuntimeError("Mermaid CLI execution timeout")
+    except FileNotFoundError:
+        print("mmdc command not found")
+        raise RuntimeError("mmdc command not found - check Mermaid CLI installation")
+
+    # Check if the output file was actually created
+    if not os.path.exists(output_image):
+        print(f"=== File Not Found Debug ===")
+        print(f"Expected output: {output_image}")
+        print(f"Temp dir contents: {os.listdir(temp_dir)}")
+        print(f"Working directory: {os.getcwd()}")
+        print("=" * 30)
+        raise FileNotFoundError(f"Generated image not found: {output_image}")
 
     # Read the generated image
-    with open(output_image, "rb") as file:
-        image_data = file.read()
+    try:
+        with open(output_image, "rb") as file:
+            image_data = file.read()
+    except Exception as e:
+        print(f"Error reading generated image: {e}")
+        raise
 
     # Clean up the temporary files
-    os.remove(output_mmd)
-    os.remove(output_image)
-    os.rmdir(temp_dir)
+    try:
+        os.remove(output_mmd)
+        os.remove(output_image)
+        os.rmdir(temp_dir)
+    except Exception as e:
+        print(f"Warning: Could not clean up temp files: {e}")
 
     # Load the image from the data
     img = Image.open(BytesIO(image_data))
-
     return img
 
 
